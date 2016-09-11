@@ -1,0 +1,5 @@
+```
+~$ mysql -p < schema.sql
+~$ go run hpkp-report.go
+~$ wget -O - --server-response --post-file=report.json -q -- http://localhost:8080/
+```
