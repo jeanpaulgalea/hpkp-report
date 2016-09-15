@@ -1,4 +1,4 @@
 {
-	"dsn": "root:abcd@/hpkp",
-	"bindaddr": ":8080"
+	"dsn": "user:pass@localhost/hpkp",
+	"bindaddr": "127.0.0.1:8080"
 }
