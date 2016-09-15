@@ -254,6 +254,14 @@ func pins (tx *sql.Tx, report_id int64, pins []string) error {
 
 		_, err = tx.Exec("INSERT INTO report_pins (report_id, pin_id) VALUES (?, ?)", report_id, pin_id)
 		if err != nil {
+			if mysqlError, ok := err.(*mysql.MySQLError); ok {
+				// ignore duplicates pin-sha256="".
+				// RFC doesn't state anything about this (so allowed?),
+				//	but doesn't make any sense to store this information.
+				if mysqlError.Number == 1062 {
+					continue
+				}
+			}
 			return err
 		}
 	}
