@@ -96,3 +96,44 @@ CREATE TABLE report_v_chain
 		ON UPDATE RESTRICT
 		ON DELETE RESTRICT
 );
+
+CREATE VIEW violations AS
+SELECT
+    reports.id,
+
+    reports.created_at,
+    reports.request_ip,
+    reports.user_agent,
+
+    reports.date_time,
+    reports.effective_expiration_date,
+    reports.hostname,
+    reports.noted_hostname,
+    reports.port
+    reports.include_subdomains,
+
+    GROUP_CONCAT(pins.pin SEPARATOR '\n') AS known_pins,
+    GROUP_CONCAT(s_certs.cert ORDER BY s_chain.position SEPARATOR '\n') AS served_certificate_chain,
+    GROUP_CONCAT(v_certs.cert ORDER BY v_chain.position SEPARATOR '\n') AS validated_certificate_chain
+
+FROM reports
+
+INNER JOIN report_pins
+    ON reports.id = report_pins.report_id
+
+INNER JOIN pins
+    ON report_pins.pin_id = pins.id
+
+INNER JOIN report_s_chain AS s_chain
+    ON reports.id = s_chain.report_id
+
+INNER JOIN certs AS s_certs
+    ON s_chain.cert_id = s_certs.id
+
+INNER JOIN report_v_chain AS v_chain
+    ON reports.id = v_chain.report_id
+
+INNER JOIN certs AS v_certs
+    ON v_chain.cert_id = v_certs.id
+
+GROUP BY reports.id;
