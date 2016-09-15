@@ -39,7 +39,7 @@ CREATE TABLE report_pins
 	PRIMARY KEY (report_id, pin_id),
 
 	FOREIGN KEY (report_id)
-		REFERENCES report(id)
+		REFERENCES reports(id)
 		ON UPDATE CASCADE
 		ON DELETE CASCADE,
 	FOREIGN KEY (pin_id)
@@ -69,7 +69,7 @@ CREATE TABLE report_s_chain
 	PRIMARY KEY (report_id, cert_id),
 
 	FOREIGN KEY (report_id)
-		REFERENCES report(id)
+		REFERENCES reports(id)
 		ON UPDATE CASCADE
 		ON DELETE CASCADE,
 	FOREIGN KEY (cert_id)
@@ -85,10 +85,10 @@ CREATE TABLE report_v_chain
 
 	position TINYINT UNSIGNED NOT NULL,
 
-	PRIMARY KEY (report_id, cert_id)
+	PRIMARY KEY (report_id, cert_id),
 
 	FOREIGN KEY (report_id)
-		REFERENCES report(id)
+		REFERENCES reports(id)
 		ON UPDATE CASCADE
 		ON DELETE CASCADE,
 	FOREIGN KEY (cert_id)
@@ -109,7 +109,7 @@ SELECT
     reports.effective_expiration_date,
     reports.hostname,
     reports.noted_hostname,
-    reports.port
+    reports.port,
     reports.include_subdomains,
 
     GROUP_CONCAT(pins.pin SEPARATOR '\n') AS known_pins,
