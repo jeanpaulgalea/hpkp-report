@@ -20,11 +20,10 @@ CREATE TABLE reports
 
 CREATE TABLE pins
 (
-	id int unsigned not null auto_increment,
-	name CHAR(10) NOT NULL,
-	value CHAR(44) NOT NULL,
+	id INT UNSIGNED NOT NULL AUTO_INCREMENT,
+	pin CHAR(44) NOT NULL, -- 'pin-sha256="(.{44})"
 
-	primary key (id)
+	PRIMARY KEY (id)
 );
 
 CREATE TABLE report_pins

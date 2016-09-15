@@ -32,11 +32,6 @@ type report struct {
 	KnownPins                 []string  `json:"known-pins"`
 }
 
-type KnownPin struct {
-	Name string
-	Value string
-}
-
 type Certificate struct {
 	PEM string
 	Pin string
@@ -119,10 +114,10 @@ func RequestIP(req *http.Request) string {
 	return ""
 }
 
-func KnownPins(pins []string) ([]KnownPin, error) {
+func KnownPins(pins []string) ([]string, error) {
 	re := regexp.MustCompile("\\Apin-sha256=(\"[^\"]+\"|'[^']+')\\z")
 
-	p := make([]KnownPin, 0, len(pins))
+	p := make([]string, 0, len(pins))
 
 	for _, pin := range pins {
 		r := re.FindStringSubmatch(pin)
@@ -140,7 +135,7 @@ func KnownPins(pins []string) ([]KnownPin, error) {
 			return p, errors.New("")
 		}
 
-		p = append(p, KnownPin{Name: "pin-sha256", Value: s})
+		p = append(p, s)
 	}
 
 	return p, nil
@@ -184,7 +179,7 @@ func PKPSHA256Hash(cert *x509.Certificate) (string, error) {
 	return s, nil
 }
 
-func violation (r report, ip string, user_agent string, kpins []KnownPin, certs_s_chain []Certificate, certs_v_chain []Certificate) error {
+func violation (r report, ip string, user_agent string, kpins []string, certs_s_chain []Certificate, certs_v_chain []Certificate) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -236,11 +231,11 @@ func db_report(tx *sql.Tx, r report, request_ip string, user_agent string) (int6
 	return report_id, nil
 }
 
-func pins (tx *sql.Tx, report_id int64, pins []KnownPin) error {
+func pins (tx *sql.Tx, report_id int64, pins []string) error {
 	var pin_id int
 
 	for _, pin := range pins {
-		_, err := tx.Exec("INSERT INTO pins (name, value) VALUES (?, ?)", pin.Name, pin.Value)
+		_, err := tx.Exec("INSERT INTO pins (pin) VALUES (?)", pin)
 		if err != nil {
 			if mysqlError, ok := err.(*mysql.MySQLError); ok {
 				if mysqlError.Number == 1062 {
@@ -252,7 +247,7 @@ func pins (tx *sql.Tx, report_id int64, pins []KnownPin) error {
 			return err
 		}
 
-		err = tx.QueryRow("SELECT id FROM pins WHERE name = ? AND value = ?", pin.Name, pin.Value).Scan(&pin_id)
+		err = tx.QueryRow("SELECT id FROM pins WHERE pin = ?", pin).Scan(&pin_id)
 		if err != nil {
 			return err
 		}
