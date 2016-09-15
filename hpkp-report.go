@@ -13,6 +13,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os"
 	"regexp"
 	"strings"
 	"time"
@@ -38,9 +39,24 @@ type Certificate struct {
 	Position int
 }
 
+type Config struct {
+	dsn      string
+	bindaddr string
+}
+
 func main() {
-	var err error
-	db, err = sql.Open("mysql", "root:abcd@/hpkp")
+	conf, err := os.Open("config.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+	decoder := json.NewDecoder(conf)
+	var c Config
+	err = decoder.Decode(&c)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	db, err = sql.Open("mysql", c.dsn)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -52,7 +68,7 @@ func main() {
 	}
 
 	http.HandleFunc("/", ReceiveReport)
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Fatal(http.ListenAndServe(c.bindaddr, nil))
 }
 
 func ReceiveReport(w http.ResponseWriter, req *http.Request) {

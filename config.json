@@ -1,0 +1,4 @@
+{
+	"dsn": "root:abcd@/hpkp",
+	"bindaddr": ":8080"
+}
