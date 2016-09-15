@@ -1,21 +1,21 @@
 package main
 
 import (
-	"crypto/x509"
 	"crypto/sha256"
+	"crypto/x509"
+	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
 	"errors"
-	"net/http"
+	"fmt"
+	"github.com/go-sql-driver/mysql"
+	"log"
 	"net"
+	"net/http"
 	"regexp"
 	"strings"
 	"time"
-	"log"
-	"database/sql"
-	"github.com/go-sql-driver/mysql"
-	"fmt"
 )
 
 var db *sql.DB
@@ -33,8 +33,8 @@ type report struct {
 }
 
 type Certificate struct {
-	PEM string
-	Pin string
+	PEM      string
+	Pin      string
 	Position int
 }
 
@@ -179,7 +179,7 @@ func PKPSHA256Hash(cert *x509.Certificate) (string, error) {
 	return s, nil
 }
 
-func violation (r report, ip string, user_agent string, kpins []string, certs_s_chain []Certificate, certs_v_chain []Certificate) error {
+func violation(r report, ip string, user_agent string, kpins []string, certs_s_chain []Certificate, certs_v_chain []Certificate) error {
 	tx, err := db.Begin()
 	if err != nil {
 		return err
@@ -231,7 +231,7 @@ func db_report(tx *sql.Tx, r report, request_ip string, user_agent string) (int6
 	return report_id, nil
 }
 
-func pins (tx *sql.Tx, report_id int64, pins []string) error {
+func pins(tx *sql.Tx, report_id int64, pins []string) error {
 	var pin_id int
 
 	for _, pin := range pins {
@@ -269,14 +269,14 @@ func pins (tx *sql.Tx, report_id int64, pins []string) error {
 	return nil
 }
 
-func certs_s (tx *sql.Tx, report_id int64, certs []Certificate) error {
+func certs_s(tx *sql.Tx, report_id int64, certs []Certificate) error {
 	return db_certs("s", tx, report_id, certs)
 }
-func certs_v (tx *sql.Tx, report_id int64, certs []Certificate) error {
+func certs_v(tx *sql.Tx, report_id int64, certs []Certificate) error {
 	return db_certs("v", tx, report_id, certs)
 }
 
-func db_certs (t string, tx *sql.Tx, report_id int64, certs []Certificate) error {
+func db_certs(t string, tx *sql.Tx, report_id int64, certs []Certificate) error {
 	var cert_id int
 
 	for _, cert := range certs {
