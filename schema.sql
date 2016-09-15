@@ -23,7 +23,8 @@ CREATE TABLE pins
 	id INT UNSIGNED NOT NULL AUTO_INCREMENT,
 	pin CHAR(44) NOT NULL, -- 'pin-sha256="(.{44})"
 
-	PRIMARY KEY (id)
+	PRIMARY KEY (id),
+	UNIQUE KEY (pin)
 );
 
 CREATE TABLE report_pins
