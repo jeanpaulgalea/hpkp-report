@@ -58,13 +58,13 @@ func main() {
 
 	db, err = sql.Open("mysql", c.dsn)
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 	defer db.Close()
 
 	err = db.Ping()
 	if err != nil {
-		panic(err.Error())
+		log.Fatal(err)
 	}
 
 	http.HandleFunc("/", ReceiveReport)
