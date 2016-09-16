@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"errors"
-	"fmt"
 	"github.com/go-sql-driver/mysql"
 	"log"
 	"net"
@@ -73,6 +72,7 @@ func main() {
 
 func ReceiveReport(w http.ResponseWriter, req *http.Request) {
 	if req.Method != "POST" {
+		log.Println("HTTP 400: non-post request")
 		w.WriteHeader(400)
 		return
 	}
@@ -81,6 +81,7 @@ func ReceiveReport(w http.ResponseWriter, req *http.Request) {
 	var r report
 	err := decoder.Decode(&r)
 	if err != nil {
+		log.Println("HTTP 400: can't decode json")
 		w.WriteHeader(400)
 		return
 	}
@@ -90,24 +91,28 @@ func ReceiveReport(w http.ResponseWriter, req *http.Request) {
 
 	kpins, err := KnownPins(r.KnownPins)
 	if err != nil {
+		log.Println("HTTP 400", err)
 		w.WriteHeader(400)
 		return
 	}
 
 	certs_s, err := CertificateChain(r.ServedCertificateChain)
 	if err != nil {
+		log.Println("HTTP 400", err)
 		w.WriteHeader(400)
 		return
 	}
 	certs_v, err := CertificateChain(r.ValidatedCertificateChain)
 	if err != nil {
+		log.Println("HTTP 400", err)
 		w.WriteHeader(400)
 		return
 	}
 
 	err = violation(r, ip, user_agent, kpins, certs_s, certs_v)
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Println("HTTP 500, didn't reach db commit, ", err)
+		w.WriteHeader(500)
 	}
 }
 
@@ -138,17 +143,17 @@ func KnownPins(pins []string) ([]string, error) {
 	for _, pin := range pins {
 		r := re.FindStringSubmatch(pin)
 		if r == nil {
-			return p, errors.New("")
+			return p, errors.New("regex doesn't match")
 		}
 
 		s := strings.Trim(r[1], "\"'")
 
 		data, err := base64.StdEncoding.DecodeString(s)
 		if err != nil {
-			return p, errors.New("")
+			return p, errors.New("can't decode base64 value")
 		}
 		if len(data) != 32 {
-			return p, errors.New("")
+			return p, errors.New("decoded base64 size is not 256 bit")
 		}
 
 		p = append(p, s)
@@ -163,15 +168,15 @@ func CertificateChain(PEMCerts []string) ([]Certificate, error) {
 	for i, PEMCert := range PEMCerts {
 		block, _ := pem.Decode([]byte(PEMCert))
 		if block == nil {
-			return c, errors.New("")
+			return c, errors.New("can't decode PEM format")
 		}
 		x509cert, err := x509.ParseCertificate(block.Bytes)
 		if err != nil {
-			return c, errors.New("")
+			return c, errors.New("can't load DER certificate")
 		}
 		p, err := PKPSHA256Hash(x509cert)
 		if err != nil {
-			return c, errors.New("")
+			return c, err
 		}
 
 		c = append(c, Certificate{PEM: PEMCert, Pin: p, Position: i})
@@ -186,7 +191,7 @@ func PKPSHA256Hash(cert *x509.Certificate) (string, error) {
 
 	der, err := x509.MarshalPKIXPublicKey(cert.PublicKey)
 	if err != nil {
-		return s, errors.New("")
+		return s, errors.New("can't marshal public key into DER format")
 	}
 
 	b = sha256.Sum256(der)
@@ -235,11 +240,11 @@ func db_report(tx *sql.Tx, r report, request_ip string, user_agent string) (int6
 
 	res, err := tx.Exec("INSERT INTO reports (created_at, request_ip, user_agent, date_time, effective_expiration_date, hostname, noted_hostname, port, include_subdomains) VALUES (UTC_TIMESTAMP(), ?, ?, ?, ?, ?, ?, ?, ?)", request_ip, user_agent, date_time, effective_expiration_date, r.Hostname, r.NotedHostname, r.Port, include_subdomains)
 	if err != nil {
-		return report_id, errors.New("1")
+		return report_id, err
 	}
 	report_id, err = res.LastInsertId()
 	if err != nil {
-		return report_id, errors.New("2")
+		return report_id, err
 	}
 
 	return report_id, nil
@@ -269,7 +274,7 @@ func pins(tx *sql.Tx, report_id int64, pins []string) error {
 		_, err = tx.Exec("INSERT INTO report_pins (report_id, pin_id) VALUES (?, ?)", report_id, pin_id)
 		if err != nil {
 			if mysqlError, ok := err.(*mysql.MySQLError); ok {
-				// ignore duplicates pin-sha256="".
+				// ignore duplicate pin-sha256="" values
 				// RFC doesn't state anything about this (so allowed?),
 				//	but doesn't make any sense to store this information.
 				if mysqlError.Number == 1062 {
