@@ -99,41 +99,41 @@ CREATE TABLE report_v_chain
 
 CREATE VIEW violations AS
 SELECT
-    reports.id,
 
-    reports.created_at,
-    reports.request_ip,
-    reports.user_agent,
+reports.id,
 
-    reports.date_time,
-    reports.effective_expiration_date,
-    reports.hostname,
-    reports.noted_hostname,
-    reports.port,
-    reports.include_subdomains,
+reports.created_at,
+reports.request_ip,
+reports.user_agent,
 
-    GROUP_CONCAT(pins.pin SEPARATOR '\n') AS known_pins,
-    GROUP_CONCAT(s_certs.cert ORDER BY s_chain.position SEPARATOR '\n') AS served_certificate_chain,
-    GROUP_CONCAT(v_certs.cert ORDER BY v_chain.position SEPARATOR '\n') AS validated_certificate_chain
+reports.date_time,
+reports.effective_expiration_date,
+reports.hostname,
+reports.noted_hostname,
+reports.port,
+reports.include_subdomains,
+
+(SELECT GROUP_CONCAT(pins.pin SEPARATOR '\n')
+ FROM report_pins
+ INNER JOIN pins
+	ON report_pins.pin_id = pins.id
+ WHERE report_pins.report_id = reports.id
+ GROUP BY report_pins.report_id) AS known_pins,
+
+(SELECT GROUP_CONCAT(certs.cert SEPARATOR '\n')
+ FROM report_s_chain
+ INNER JOIN certs
+	ON report_s_chain.cert_id = certs.id
+ WHERE report_s_chain.report_id = reports.id
+ GROUP BY report_s_chain.report_id
+ ORDER BY report_s_chain.position) AS served_certificate_chain,
+
+(SELECT GROUP_CONCAT(certs.cert SEPARATOR '\n')
+ FROM report_v_chain
+ INNER JOIN certs
+	ON report_v_chain.cert_id = certs.id
+ WHERE report_v_chain.report_id = reports.id
+ GROUP BY report_v_chain.report_id
+ ORDER BY report_v_chain.position) AS validated_certificate_chain
 
 FROM reports
-
-INNER JOIN report_pins
-    ON reports.id = report_pins.report_id
-
-INNER JOIN pins
-    ON report_pins.pin_id = pins.id
-
-INNER JOIN report_s_chain AS s_chain
-    ON reports.id = s_chain.report_id
-
-INNER JOIN certs AS s_certs
-    ON s_chain.cert_id = s_certs.id
-
-INNER JOIN report_v_chain AS v_chain
-    ON reports.id = v_chain.report_id
-
-INNER JOIN certs AS v_certs
-    ON v_chain.cert_id = v_certs.id
-
-GROUP BY reports.id;
