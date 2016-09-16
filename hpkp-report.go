@@ -39,8 +39,8 @@ type Certificate struct {
 }
 
 type Config struct {
-	dsn      string
-	bindaddr string
+	Dsn      string `json:"dsn"`
+	Bindaddr string `json:"bindaddr"`
 }
 
 func main() {
@@ -55,7 +55,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	db, err = sql.Open("mysql", c.dsn)
+	db, err = sql.Open("mysql", c.Dsn)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -67,7 +67,7 @@ func main() {
 	}
 
 	http.HandleFunc("/", ReceiveReport)
-	log.Fatal(http.ListenAndServe(c.bindaddr, nil))
+	log.Fatal(http.ListenAndServe(c.Bindaddr, nil))
 }
 
 func ReceiveReport(w http.ResponseWriter, req *http.Request) {
