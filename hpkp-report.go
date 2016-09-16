@@ -201,24 +201,22 @@ func violation(r report, ip string, user_agent string, kpins []string, certs_s_c
 		return err
 	}
 
+	defer tx.Rollback()
+
 	report_id, err := db_report(tx, r, ip, user_agent)
 	if err != nil {
-		tx.Rollback()
 		return err
 	}
 	err = pins(tx, report_id, kpins)
 	if err != nil {
-		tx.Rollback()
 		return err
 	}
 	err = certs_s(tx, report_id, certs_s_chain)
 	if err != nil {
-		tx.Rollback()
 		return err
 	}
 	err = certs_v(tx, report_id, certs_v_chain)
 	if err != nil {
-		tx.Rollback()
 		return err
 	}
 
