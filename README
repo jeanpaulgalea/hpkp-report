@@ -1,5 +1,8 @@
 ```
-~$ mysql -p < schema.sql
-~$ go run hpkp-report.go
+~$ mysql -u root -p < schema.sql
+~$ mysql -u root -p -e "GRANT SELECT, INSERT ON hpkp.* TO hpkp@localhost IDENTIFIED BY 'abcd';"
+~$ go build hpkp-report.go
+~$ ./hpkp-report
 ~$ wget -O - --server-response --post-file=report.json -q -- http://localhost:8080/
+~$ mysql -u hpkp -p -e "SELECT * FROM hpkp.violations\G" -B
 ```
